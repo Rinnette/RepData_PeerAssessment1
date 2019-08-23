@@ -7,15 +7,67 @@ output:
 
 
 ## Loading and preprocessing the data
+The following code loads the data into R.  The data is stored in **Actdata**.
 
+```{r loadData, results = "hide"}
+        library(readr)
+        Actdata <- read_csv("activity.zip")
+```
 
 
 ## What is mean total number of steps taken per day?
 
+### Total number of steps taken per day.
+
+The data is grouped by day, then the total number of steps is calculated for each day and stored in the variable **sumSteps**.
+
+```{r meanStepsDay}
+        library(dplyr)
+        
+        ## Calculate the total number of steps by date
+        sumStepsDay <-
+                Actdata %>%
+                group_by(date) %>%
+                summarize(sum(steps))
+        sumStepsDay
+
+```
+
+### Histogram of total number of steps taken each day
+
+**sumStepsDay** is used to create a histogram of steps taken each day.
+
+```{r histSteps}
+        # Create a 'steps' column that is numeric
+        sumStepsDay$steps <- as.numeric(sumStepsDay$`sum(steps)`)
+
+        # Plot the histogram of steps taken each day
+        hist(sumStepsDay$steps, col = "skyblue", xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
+        
+```
+
+The **mean** and **median** number of steps taken in a day can be calculated using the following which caters for the 'NA' values in the **steps** column.
+
+Mean is `r mean(sumStepsDay$steps, na.rm = TRUE)`
+
+```{r meanmedian}
+        mean(sumStepsDay$steps, na.rm = TRUE)
+        median(sumStepsDay$steps, na.rm = TRUE)
+```
 
 
 ## What is the average daily activity pattern?
+```{r meanStepsInterval}
+        ## Calculate the average number of steps by interval
+        avgStepsInt <-
+                Actdata %>%
+                group_by(interval) %>%
+                summarize(mean(steps, na.rm = TRUE))
+        avgStepsInt
 
+        avgStepsInt$avgSteps <- as.numeric(avgStepsInt$`mean(steps, na.rm = TRUE)`)
+        plot(avgStepsInt$interval, avgStepsInt$avgSteps, type = "l", col = "blue")
+```
 
 
 ## Imputing missing values
