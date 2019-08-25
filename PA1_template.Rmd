@@ -6,8 +6,8 @@ output:
 ---
 
 
-## Loading and preprocessing the data
-The following code loads the data into R.  The data is stored in **Actdata**.
+## 1. Loading and preprocessing the data
+The following code was used to load the data into R.  The data is stored in a data table called **Actdata**.
 
 ```{r loadData, results = "hide"}
         library(readr)
@@ -15,9 +15,9 @@ The following code loads the data into R.  The data is stored in **Actdata**.
 ```
 
 
-## What is mean total number of steps taken per day?
+## 2. What is mean total number of steps taken per day?
 
-### Total number of steps taken per day.
+### 2.1 Calculate the total number of steps taken per day.
 
 The data is grouped by day, then the total number of steps is calculated for each day and stored in the variable **sumSteps**.
 
@@ -28,23 +28,22 @@ The data is grouped by day, then the total number of steps is calculated for eac
         sumStepsDay <-
                 Actdata %>%
                 group_by(date) %>%
-                summarize(sum(steps))
+                summarize(steps = sum(steps))
         sumStepsDay
 
 ```
 
-### Histogram of total number of steps taken each day
+### 2.2 Histogram of total number of steps taken each day
 
 **sumStepsDay** is used to create a histogram of steps taken each day.
 
 ```{r histSteps}
-        # Create a 'steps' column that is numeric
-        sumStepsDay$steps <- as.numeric(sumStepsDay$`sum(steps)`)
-
         # Plot the histogram of steps taken each day
-        hist(sumStepsDay$steps, col = "skyblue", xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
+        hist(sumStepsDay$steps, col = "skyblue", xlim = c(0, 25000), ylim = c(0, 20), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
         
 ```
+
+### 2.3 Calculate the mean and median of the total number of steps
 
 The **mean** and **median** number of steps taken in a day can be calculated using the following which caters for the 'NA' values in the **steps** column.
 
@@ -56,22 +55,114 @@ Mean is `r mean(sumStepsDay$steps, na.rm = TRUE)`
 ```
 
 
-## What is the average daily activity pattern?
+## 3. What is the average daily activity pattern?
+
+The daily activity pattern ...
+
+### 3.1 Make a time series plot of 5-minute intervals and average steps taken
+
 ```{r meanStepsInterval}
-        ## Calculate the average number of steps by interval
+        ## Calculate the average number of steps for each interval
         avgStepsInt <-
                 Actdata %>%
                 group_by(interval) %>%
-                summarize(mean(steps, na.rm = TRUE))
+                summarize(avgSteps = mean(steps, na.rm = TRUE))
         avgStepsInt
 
-        avgStepsInt$avgSteps <- as.numeric(avgStepsInt$`mean(steps, na.rm = TRUE)`)
-        plot(avgStepsInt$interval, avgStepsInt$avgSteps, type = "l", col = "blue")
+        #Make time series plot
+        library(ggplot2)
+        ggplot(avgStepsInt, aes(x = interval, y = avgSteps)) +
+                        geom_line(size = 1, colour = "dark blue") +
+                        scale_x_continuous(breaks = seq(0, 2400, by = 200)) +
+                        xlab("Interval") +
+                        ylab("Average number of steps") +
+                        ggtitle("Average Daily Activity by Interval")
+```
+
+### 3.2 Interval which contains the maximum number of steps
+
+The interval 835 contains the maximum average number of steps (about 206) across all days.
+
+
+## 4. Imputing missing values
+### 4.1 Total number of missing values in the dataset
+The total number of rows with 'NA's is **2304**.  The code and output are provided below.
+
+```{r rowsWithNA}
+        sum(!complete.cases(Actdata))
+```
+
+### 4.2 Filling in missing values in the dataset
+NAs in the dataset will be replaced with the average number of steps for that particular interval.  Average numbers of steps for each interval have already been calculated and stored in the table **avgStepsInt**.
+
+```{r replaceNA}
+
+        # Add a column, imputSteps, to the original data.  For each value in the column, if 'steps'
+        # is NA, imputSteps is the average steps calculated previously for the corresponding
+        # interval.  Else, if steps is not NA, imputSteps takes the value of steps.
+
+        #imput <- avgStepsInt$avgSteps[match(Actdata$interval, avgStepsInt$interval)]
+        Actdata <- transform(Actdata, imputSteps = ifelse(is.na(steps), 
+                                avgStepsInt$avgSteps[match(Actdata$interval, avgStepsInt$interval)],                                 steps))
+```
+
+### 4.3 Create new dataset equivalent to the original with missing data filled in
+The new dataset with no NAs was created by selecting all columns from the original data, except the **steps** columns which contains NAs.  The new column **imputSteps** will replace **steps**.
+
+```{r createnewdata}
+        newdata <- select(Actdata, -steps)
+        newdata <- rename(newdata, steps = imputSteps)
+```
+
+### 4.4 Histogram of total steps taken & comparison with the original data
+The total steps per day was calculated and histogram created.
+
+```{r newHist}
+        #Calculate total steps per day
+        newSumStepsDay <-
+                newdata %>%
+                group_by(date) %>%
+                summarize(steps = sum(steps))
+        newSumStepsDay
+
+        #Plot histogram
+        hist(newSumStepsDay$steps, col = "light green", xlim = c(0, 25000), ylim = c(0, 25), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
+```
+
+The new mean and median are provided below:
+```{r newmeanmedian}
+        mean(newSumStepsDay$steps, na.rm = TRUE)
+        median(newSumStepsDay$steps, na.rm = TRUE)
+```
+
+The mean value remained the same at **10766.19** for the original data and new data.  
+
+The median increased only slightly from 10765 to **10766.19**.  
+
+Note that both the mean and the median are identical with the new data where no NA's are present.
+
+The following was noted when both histograms were compared:
+
+* very little changed with respect to the distribution of the number of steps across the days
+* the maximum number of steps ...
+
+Both histograms are provided below for easy comparison.
+
+```{r bothHistograms, echo = FALSE}
+        par(mfrow = c(1,2))
+        hist(sumStepsDay$steps, col = "skyblue", xlim = c(0, 25000), ylim = c(0, 25), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Total steps taken with NAs")
+        hist(newSumStepsDay$steps, col = "light green", xlim = c(0, 25000), ylim = c(0, 25), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Total steps taken without NAs")
+
 ```
 
 
-## Imputing missing values
+## 5. Are there differences in activity patterns between weekdays and weekends?
+
+### 5.1 Create a new factor variable in the dataset
+A new variable was added to the dataset to separate the data in 2 categories: **weekend** is the date falls on a Saturday or Sunday, and **weekday** if it falls during the week.
+
+```{r addNewVariable}
+ newdata <- mutate(newdata, daycat = ifelse(weekdays(date) %in% c("Saturday", "Sunday"), "weekend", "weekday"))
+```
 
 
-
-## Are there differences in activity patterns between weekdays and weekends?
