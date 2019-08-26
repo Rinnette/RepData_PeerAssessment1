@@ -7,9 +7,9 @@ output:
 
 
 ## 1. Loading and preprocessing the data
-The following code was used to load the data into R.  The data was stored in a data table called **Actdata** and loaded directly from the zipped file.
+The following code was used to load the activity monitoring data into R.  The data was stored in a data table called **Actdata** and loaded directly from the zipped file.
 
-```{r loadData, results = "hide"}
+```{r loadData, warning = FALSE, message = FALSE}
         library(readr)
         Actdata <- read_csv("activity.zip")
 ```
@@ -21,15 +21,14 @@ The following code was used to load the data into R.  The data was stored in a d
 
 The data was grouped by day, then the total number of steps was calculated for each day and stored in  **sumStepsDay**.
 
-```{r sumStepsDay}
+```{r sumStepsDay, warning = FALSE, message = FALSE}
         library(dplyr)
-        
+
         ## Calculate the total number of steps by date
         sumStepsDay <-
                 Actdata %>%
                 group_by(date) %>%
                 summarize(steps = sum(steps))
-        sumStepsDay
 
 ```
 
@@ -39,13 +38,15 @@ The data was grouped by day, then the total number of steps was calculated for e
 
 ```{r histSteps}
         # Plot the histogram of steps taken each day
-        hist(sumStepsDay$steps, col = "skyblue", xlim = c(0, 25000), ylim = c(0, 20), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
+        hist(sumStepsDay$steps, col = "skyblue", xlim = c(0, 25000), ylim = c(0, 20), breaks = 20, 
+             xlab = "Total steps taken in a day", ylab = "Frequency (Days)", 
+             main = "Histogram of the number of steps taken each day")
         
 ```
 
 ### 2.3 Calculate the mean and median of the total number of steps
 
-The **mean** and **median** number of steps was calculated using the following statements which catered for the 'NA' values in the **steps** column.
+The **mean** and **median** number of steps were calculated using the following statements.
 
 ```{r meanmedian}
         mean(sumStepsDay$steps, na.rm = TRUE)
@@ -55,7 +56,7 @@ The **mean** and **median** number of steps was calculated using the following s
 
 ## 3. What is the average daily activity pattern?
 
-The daily activity pattern ...
+The daily activity pattern refers to the average number of steps for each time interval across all days.
 
 ### 3.1 Make a time series plot of 5-minute intervals and average steps taken
 The data was grouped by the interval, then the average steps was calculated for each interval across all days.
@@ -79,14 +80,18 @@ The data was grouped by the interval, then the average steps was calculated for 
 
 ### 3.2 Interval which contains the maximum number of steps
 
-The interval **835** contains the maximum average number of steps (about 206).
+The interval **835** contains the maximum average number of steps.
+
+```{r maxStepsInt}
+avgStepsInt[avgStepsInt$avgSteps == max(avgStepsInt$avgSteps),]
+```
 
 
 ## 4. Imputing missing values
-In this dataset missing information was denoted by NA. Sometimes missing information can introduce bias into calculations or summaries of data.  As a result the NA's were replaced for further analysis. 
+In this dataset missing information was denoted by NA. Sometimes missing information can introduce bias into calculations or summaries of data.  As a result the NA's were replaced by estimated values and further analysed. 
 
 ### 4.1 Total number of missing values in the dataset
-The total number of rows with 'NA's is **2304**.  The code and output are provided below.
+The total number of rows with 'NA's is **2304**.
 
 ```{r rowsWithNA}
         sum(!complete.cases(Actdata))
@@ -99,14 +104,14 @@ The NAs in the dataset were replaced by the average number of steps for that par
 
         # The column, imputSteps, was added to the original data.  If the value in the 'steps' 
         # column is NA, imputSteps takes the value of the average steps calculated previously for
-        # the corresponding interval.  Else imputSteps takes the value from the steps column.
+        # the corresponding interval, else imputSteps takes the value from the 'steps' column.
 
         Actdata <- transform(Actdata, imputSteps = ifelse(is.na(steps), 
                                 avgStepsInt$avgSteps[match(Actdata$interval, avgStepsInt$interval)],                                 steps))
 ```
 
 ### 4.3 Create a new dataset equivalent to the original with missing data filled in
-The new dataset with no missing data was created by selecting all columns from the original data, except the **steps** columns which contains NAs.  The new column **imputSteps** replaced **steps**.
+The new, imputed dataset with no missing data was created by selecting all columns from the original data, except for the **steps** column which contains NAs.  The new column **imputSteps** replaced **steps**.
 
 ```{r createnewdata}
         newdata <- select(Actdata, -steps)
@@ -114,7 +119,7 @@ The new dataset with no missing data was created by selecting all columns from t
 ```
 
 ### 4.4 Make a histogram of total steps taken & compare with the original data
-The total steps per day was calculated using the data with no missing values, newdata, and a histogram was created.
+The total steps per day was calculated using the imputed data and this was used to create a histogram.
 
 ```{r newHist}
         #Re-calculate total steps per day with newdata
@@ -122,34 +127,26 @@ The total steps per day was calculated using the data with no missing values, ne
                 newdata %>%
                 group_by(date) %>%
                 summarize(steps = sum(steps))
-        newSumStepsDay
 
         #Plot histogram
-        hist(newSumStepsDay$steps, col = "light green", xlim = c(0, 25000), ylim = c(0, 25), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
+        hist(newSumStepsDay$steps, col = "light green", xlim = c(0, 25000), ylim = c(0, 25), 
+             breaks = 20, xlab = "Total steps taken in a day", 
+             ylab = "Frequency (Days)", main = "Histogram of the number of steps taken each day")
 ```
 
-The new mean and median of total steps taken per day are provided below.
+The mean and median of total steps taken per day from the imputed data are provided below.
 ```{r newmeanmedian}
         mean(newSumStepsDay$steps, na.rm = TRUE)
         median(newSumStepsDay$steps, na.rm = TRUE)
 ```
 
-The mean value remained the same at **10766.19** for the original data and the complete data.  The median increased only slightly from 10765 to **10766.19**.  Note that with the new data where no NA's are present, both the mean and the median are identical. 
+The mean value remained the same at **10766.19** for the imputed data.  The median increased only slightly from 10765 to **10766.19**.  Note that with the imputed data both the mean and the median are identical. 
 
-Therefore it seems as if imputing the missing data had no effect on the estimates of the total daily number of steps. 
-
-Both histograms are provided below for easy comparison.
-
-```{r bothHistograms, echo = FALSE}
-        par(mfrow = c(1,2))
-        hist(sumStepsDay$steps, col = "skyblue", xlim = c(0, 25000), ylim = c(0, 25), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Total steps taken with NAs")
-        hist(newSumStepsDay$steps, col = "light green", xlim = c(0, 25000), ylim = c(0, 25), breaks = 10, xlab = "Total steps taken in a day", ylab = "Frequency (Days)", main = "Total steps taken without NAs")
-
-```
+It therefore seems as if imputing the missing data had no effect on the estimates of the total daily number of steps. 
 
 
 ## 5. Are there differences in activity patterns between weekdays and weekends?
-These section checks whether daily activity differs on weekends compared to weekdays.
+This section checks whether daily activity differs on weekends compared to weekdays.
 
 
 ### 5.1 Create a new factor variable in the dataset
@@ -159,8 +156,8 @@ A new variable was added to the dataset to separate the data into 2 categories: 
  newdata <- mutate(newdata, daycat = factor(ifelse(weekdays(date) %in% c("Saturday", "Sunday"), "weekend", "weekday")))
 ```
 
-### 5.2 Make a panel plot containing a time series plot of interval and averagesteps taken
-The new data with no missing data was grouped by the interval then day category.  The average steps was re-calculated for each group across all days.
+### 5.2 Make a panel plot containing a time series plot of interval and average steps taken
+The imputed data was grouped by interval then by day category (ie. weekend or weekday).  The average number of steps was calculated for each group across all days.
 
 ```{r plotDayCategory}
         # Calculate average steps by interval and day category
